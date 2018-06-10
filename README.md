@@ -20,7 +20,7 @@ Consequently, repeating this process will lead to lower error and better accurac
 
 Alternatively, manual guessing of the properties with Manual Fit button also works.
 
-Save a screenshot button save a png image of the GUI.
+"Save screenshot" button saves a png image of the GUI with a default name (png fle).
 
 ### Example:
 The sample.xls provides data about M-H measurements taken at 400 K for a nanoparticles with an estimated size/diameter of 31.5 nm (estimated using another technique, X-ray diffration or XRD)
