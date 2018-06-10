@@ -6,11 +6,16 @@ This is a Matlab GUI for estimating superparamagnetic nanoparticles sizes (diame
 Data to be fed into GUI needs to be in an excel file where 1st column is for magnetic field (x-axis), and second column is for magnetization (y-axis).
 
 ### Usage:
-User uploads the file using the load button, experimental data is plotted automatically,
-Temperature must be entered as the input: it must be known from the experiment,
+User uploads the file using the load button, experimental data is plotted automatically.
+
+Temperature must be entered as the input: it must be known from the experiment.
+
 From the plot, max saturation value can be guessed & entered; the radio button for guess magnetic saturation should be selected. 
+
 Pressing AutoFit button will do regression for magnetic saturation value.
+
 Then, nanoparticle (NP) size guess radio button should be selected and AutoFit button will do regression for NP size.
+
 Consequently, repeating this process will lead to lower error and better accuracy.
 
 Alternatively, manual guessing of the properties with Manual Fit button also works.
