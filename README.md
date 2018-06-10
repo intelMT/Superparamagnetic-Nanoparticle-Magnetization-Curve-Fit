@@ -1,4 +1,4 @@
-## Superparamagnetic-Nanoparticle-Magnetization-Curve-Fit
+## Superparamagnetic Nanoparticle Magnetization Curve Fitting
 
 ### Introduction:
 This is a Matlab GUI for estimating superparamagnetic nanoparticles sizes (diameter) from the obtained M-H magnetization curves using [Langevin's function](https://en.wikipedia.org/wiki/Brillouin_and_Langevin_functions#Langevin_function).
