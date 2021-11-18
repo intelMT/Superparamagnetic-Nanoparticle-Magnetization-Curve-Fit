@@ -22,7 +22,7 @@ function varargout = MH_Curve_Fit(varargin)
 
 % Edit the above text to modify the response to help MH_Curve_Fit
 
-% Last Modified by GUIDE v2.5 09-Jun-2018 16:25:11
+% Last Modified by GUIDE v2.5 18-Nov-2021 17:24:41
 
 % Begin initialization code - DO NOT EDIT
 gui_Singleton = 1;
@@ -52,8 +52,7 @@ function MH_Curve_Fit_OpeningFcn(hObject, eventdata, handles, varargin)
 % handles    structure with handles and user data (see GUIDATA)
 % varargin   command line arguments to MH_Curve_Fit (see VARARGIN)
 
-global n H V u k Et x y
-global a T MS NP
+
 
 % initialize the options to some arbitrary values
 set(handles.np_size_io,'String','40');
@@ -64,12 +63,20 @@ handles.Manual_Fit.Enable = 'Inactive';
 handles.Auto_Fit.Enable = 'Inactive';
 handles.Clear_Plot.Enable = 'Inactive';
 
-handles.Usage.String = 'First load your data (from .xls file 1st col. magnetic field in Oe, 2nd col. magnetization in emu). Enter your guess for mag. sat. by observing the max y-value in the plot and then try auto-fitting with Mag. Sat. firstly and NP-size secondly and repeat...';
+handles.Usage.String = ['First load your data (from an excel *.xls file where the 1st column must be' ...
+' the magnetic field in Oe, and the 2nd column the magnetization in emu). For manual guess, enter what' ... 
+' you think is the nanoparticle size or the saturation magnetization and choose which parameter to optimize.'... 
+' Autofit does inputted amount of iterations to obtain the best fit to the experimental data.' ...
+' NOTES: (+) Useful only for spherical superparamagnetic nanoparticles. (+) The curvefit''s results are displayed'...
+' in the same (guess) textboxes. You can ignore any warning by Matlab about local minimums.'];
 xlabel(handles.GraphAxes,'Magnetic Field (Oe)');
 ylabel(handles.GraphAxes,'Magnetization (emu)');
 title(handles.GraphAxes,'M-H Curves');
 handles.GraphAxes.XTick = [];
 handles.GraphAxes.YTick = [];
+
+% Default manual mode
+set(handles.Find_Mag_Sat, 'Value', 1)
 
 % Choose default command line output for MH_Curve_Fit
 handles.output = hObject;
@@ -173,11 +180,11 @@ guidata(hObject, handles);
 handles.fullFileName = strcat(handles.path, handles.fileName);
 [x, y] = ReadExcel(handles.fullFileName,1,2);
 guidata(hObject, handles);
-plot (handles.GraphAxes, x,y,'LineWidth',2);
-xlabel(handles.GraphAxes,'Magnetic Field (Oe)');
-ylabel(handles.GraphAxes,'Magnetization (emu)');
-title(handles.GraphAxes,'M-H Curves');
-legend(handles.GraphAxes,'Experiment','Fitting');
+plot (handles.GraphAxes, x, y, 'LineWidth', 2);
+xlabel(handles.GraphAxes, 'Magnetic Field (Oe)');
+ylabel(handles.GraphAxes, 'Magnetization (emu)');
+title(handles.GraphAxes, 'M-H Curves');
+legend(handles.GraphAxes, 'Experiment','Curve Fitting');
 handles.GraphAxes.YGrid = 'On';
 handles.GraphAxes.XGrid = 'On';
 
@@ -207,7 +214,6 @@ function Manual_Fit_Callback(hObject, eventdata, handles)
 cla(handles.GraphAxes);
 global n H V u k Et x y
 global a T MS 
-[x, y] = ReadExcel(handles.fullFileName,1,2);
 guidata(hObject, handles);
 %plot (handles.GraphAxes, x,y);
 a = str2double(get(handles.np_size_io, 'String'));
@@ -257,29 +263,32 @@ function Auto_Fit_Callback(hObject, eventdata, handles)
 % hObject    handle to Auto_Fit (see GCBO)
 % eventdata  reserved - to be defined in a future version of MATLAB
 % handles    structure with handles and user data (see GUIDATA)
-global n H V u k Et x y
+global y
 global a T MS 
 global  max_sat Saturation
+global NumIter
 
-[x, y] = ReadExcel(handles.fullFileName,1,2);
 guidata(hObject, handles);
 % plot (handles.GraphAxes, x,y);
 a = str2double(get(handles.np_size_io, 'String'));
 T = str2double(get(handles.temperature_io, 'String'));
 MS = str2double(get(handles.magnetic_saturation_io, 'String'));
-
-if handles.Find_Mag_Sat.Value ==1
-    max_sat = max(y); % initial guess
-    Saturation = lsqnonlin(@AutoFit,max_sat)
-    set(handles.magnetic_saturation_io, 'String',num2str(Saturation));
-    Manual_Fit_Callback(hObject, eventdata, handles)
-elseif handles.Find_NP_size.Value ==1
-    NP_guess = a; % initial guess
-    NP_size_estimate = lsqnonlin(@AutoFit2,NP_guess);
-    set(handles.np_size_io, 'String',num2str(NP_size_estimate));
-    Manual_Fit_Callback(hObject, eventdata, handles)
-else
-    errordlg('Select one property to guess (NP size or sat. magnetization)','What to guess?')
+NumIter = str2double(get(handles.NumIterations, 'String'));
+for i=1:NumIter    
+    if handles.Find_Mag_Sat.Value == 1
+        max_sat = max(y); % initial guess is the maximum of experimental data
+        Saturation = lsqnonlin(@AutoFit, max_sat, [0 500]);
+        set(handles.magnetic_saturation_io, 'String',num2str(Saturation));
+        Manual_Fit_Callback(hObject, eventdata, handles)
+        set(handles.Find_Mag_Sat, 'Value',0)
+        set(handles.Find_NP_size, 'Value',1)
+    elseif handles.Find_NP_size.Value == 1
+        NP_size_estimate = lsqnonlin(@AutoFit2, a, [0 999]);
+        set(handles.np_size_io, 'String', num2str(NP_size_estimate));
+        Manual_Fit_Callback(hObject, eventdata, handles)
+        set(handles.Find_NP_size, 'Value', 0)
+        set(handles.Find_Mag_Sat, 'Value', 1)
+    end
 end
 
 
@@ -293,14 +302,14 @@ H=x;
 V=4/3*pi*(sizeNP/2*10^-7)^3; % Volume of a NP from diameter(sizeNP)
 u=V*Ms;
 k=1.3806504*10^-16; % Boltzmann's constant
-Et=k*Temp; % thermal energy k*T
+Et=k*Temp; % Thermal energy k*T
 angle = zeros(n,1);
 Mt = zeros(n,1);
 for i=1:n
 angle(i,1)=(u/Et)*H(i);
 Mt(i,1)=Ms.*langev(angle(i,1));
 end
-res = Mt - y; % trying to minimize the the difference between exp. and fit
+res = Mt - y; % trying to minimize the difference between the exp. and fit
 
 function res = AutoFit2(sizeNP)
 global x y k V T MS
@@ -313,10 +322,12 @@ k=1.3806504*10^-16; % Boltzmann's constant
 Et=k*Temp;
 angle = zeros(n,1);
 Mt = zeros(n,1);
+
 for i=1:n
-angle(i,1)=(u/Et)*H(i);
-Mt(i,1)=MS.*langev(angle(i,1));
+    angle(i,1) = (u/Et)*H(i);
+    Mt(i,1)= MS.*langev(angle(i,1));
 end
+
 res = Mt - y; % trying to minimize the the difference between exp. and fit
 
 
@@ -352,3 +363,26 @@ if handles.Find_Mag_Sat.Value == 1
     set(handles.Find_NP_size, 'Value',0)
 end
 % Hint: get(hObject,'Value') returns toggle state of Find_Mag_Sat
+
+
+
+function NumIterations_Callback(hObject, eventdata, handles)
+% hObject    handle to NumIterations (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    structure with handles and user data (see GUIDATA)
+
+% Hints: get(hObject,'String') returns contents of NumIterations as text
+%        str2double(get(hObject,'String')) returns contents of NumIterations as a double
+
+
+% --- Executes during object creation, after setting all properties.
+function NumIterations_CreateFcn(hObject, eventdata, handles)
+% hObject    handle to NumIterations (see GCBO)
+% eventdata  reserved - to be defined in a future version of MATLAB
+% handles    empty - handles not created until after all CreateFcns called
+
+% Hint: edit controls usually have a white background on Windows.
+%       See ISPC and COMPUTER.
+if ispc && isequal(get(hObject,'BackgroundColor'), get(0,'defaultUicontrolBackgroundColor'))
+    set(hObject,'BackgroundColor','white');
+end
